@@ -6,6 +6,7 @@ import { Queue } from "bullmq";
 import { QdrantVectorStore } from "@langchain/qdrant";
 import { Embeddings } from "@langchain/core/embeddings";
 import { OpenAIEmbeddings } from "@langchain/openai";
+import OpenAI from "openai";
 
 dotenv.config();
 
@@ -14,6 +15,10 @@ const queue = new Queue("pdf-processing", {
     host: "localhost",
     port: 6379,
   },
+});
+
+const openAIClient = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
 const embeddings = new OpenAIEmbeddings({
@@ -55,14 +60,33 @@ app.post("/upload/pdf", upload.single("pdf"), async (req, res) => {
 });
 
 app.get("/chat", async (req, res) => {
-  const userQuery = "how many years of expierence Ranjan has?";
+  const userQuery = req.query.message;
   const retriver = vectorStore.asRetriever({
     k: 2,
   });
   const retriverResponse = await retriver.invoke(userQuery);
   console.log("retriverResponse:", retriverResponse);
+  const SYSTEM_PROMPT =
+    "Your AI asistance helps to anawer user query based on the context provided, do not share the reference document.";
+  const chatResult = await openAIClient.chat.completions.create({
+    model: "gpt-4.1",
+    messages: [
+      {
+        role: "system",
+        content: SYSTEM_PROMPT,
+      },
+      {
+        role: "developer",
+        content: retriverResponse[0]?.pageContent ?? "",
+      },
+      {
+        role: "user",
+        content: userQuery,
+      },
+    ],
+  });
   return res.json({
-    retriverResponse: retriverResponse,
+    message: chatResult.choices[0].message.content,
   });
 });
 
