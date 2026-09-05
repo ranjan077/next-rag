@@ -1,0 +1,137 @@
+services:
+  # =========================
+  # Node.js API Server
+  # =========================
+  server:
+    build:
+      context: ./apps/server
+      dockerfile: dockerfile
+
+    ports:
+      - "8000:8000"
+
+    environment:
+      NODE_ENV: production
+      PORT: 8000
+
+      # Qdrant
+      QDRANT_URL: http://qdrant:6333
+
+      # Valkey
+      VALKEY_HOST: valkey
+      VALKEY_PORT: 6379
+
+      # BullMQ
+      BULL_MQ_HOST: valkey
+      BULL_MQ_PORT: 6379
+
+      # OpenAI
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+
+      # LangSmith
+      LANGSMITH_TRACING: ${LANGSMITH_TRACING}
+      LANGSMITH_ENDPOINT: ${LANGSMITH_ENDPOINT}
+      LANGSMITH_API_KEY: ${LANGSMITH_API_KEY}
+      LANGSMITH_PROJECT: ${LANGSMITH_PROJECT}
+
+    volumes:
+      - uploads:/app/uploads
+
+    depends_on:
+      - qdrant
+      - valkey
+
+    restart: unless-stopped
+
+  # =========================
+  # BullMQ Worker
+  # =========================
+  worker:
+    build:
+      context: ./apps/server
+      dockerfile: dockerfile
+
+    command: ["node", "worker.js"]
+
+    environment:
+      NODE_ENV: production
+
+      # Valkey
+      VALKEY_HOST: valkey
+      VALKEY_PORT: 6379
+
+      # Qdrant
+      QDRANT_URL: http://qdrant:6333
+
+      # OpenAI
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+
+    volumes:
+      - uploads:/app/uploads
+
+    depends_on:
+      - valkey
+      - qdrant
+
+    restart: unless-stopped
+
+  # =========================
+  # Next.js Client
+  # =========================
+  client:
+    build:
+      context: ./apps/client
+      dockerfile: dockerfile
+
+    ports:
+      - "3000:3000"
+
+    environment:
+      NODE_ENV: production
+      NEXT_TELEMETRY_DISABLED: 1
+      HOSTNAME: 0.0.0.0
+
+      # Change this to your production API URL
+      # Example:
+      # NEXT_PUBLIC_API_URL: https://api.example.com
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+
+    depends_on:
+      - server
+
+    restart: unless-stopped
+
+  # =========================
+  # Qdrant Vector Database
+  # =========================
+  qdrant:
+    image: qdrant/qdrant
+
+    volumes:
+      - qdrant_storage:/qdrant/storage
+
+    restart: unless-stopped
+
+  # =========================
+  # Valkey / Redis-compatible DB
+  # =========================
+  valkey:
+    image: valkey/valkey
+
+    volumes:
+      - valkey_data:/data
+
+    restart: unless-stopped
+
+# =========================
+# Persistent Volumes
+# =========================
+volumes:
+  # Uploaded PDFs
+  uploads:
+
+  # Qdrant vector database
+  qdrant_storage:
+
+  # Valkey data
+  valkey_data:

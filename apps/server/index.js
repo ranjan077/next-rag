@@ -12,8 +12,8 @@ dotenv.config();
 
 const queue = new Queue("pdf-processing", {
   connection: {
-    host: "localhost",
-    port: 6379,
+    host: process.env.BULL_MQ_HOST,
+    port: process.env.BULL_MQ_PORT,
   },
 });
 
@@ -65,7 +65,6 @@ app.get("/chat", async (req, res) => {
     k: 2,
   });
   const retriverResponse = await retriver.invoke(userQuery);
-  console.log("retriverResponse:", retriverResponse);
   const SYSTEM_PROMPT =
     "Your AI asistance helps to anawer user query based on the context provided, do not share the reference document.";
   const chatResult = await openAIClient.chat.completions.create({

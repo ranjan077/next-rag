@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "node --watch index.ts ",
+    "start": "node index.ts ",
     "dev:worker": "node --watch worker.ts"
   },
   "author": "",
@@ -19,7 +20,7 @@
     "cors": "^2.8.6",
     "dotenv": "^16.6.1",
     "express": "4.x",
-    "ioredis": "^6.0.0",
+    "ioredis": "^5.11.1",
     "langchain": "^1.5.10",
     "multer": "^2.3.0",
     "openai": "^4.104.0",
