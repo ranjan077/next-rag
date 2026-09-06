@@ -14,7 +14,7 @@ export default function FileUpload() {
         const formData = new FormData();
         formData.append("pdf", file);
         const res = await fetch(
-          `${process.env.NEXT_PUBLIC_SERVER_URL}/upload/pdf`,
+          `${process.env.NEXT_PUBLIC_API_URL}/upload/pdf`,
           {
             method: "POST",
             body: formData,
