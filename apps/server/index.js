@@ -4,7 +4,6 @@ import dotenv from "dotenv";
 import multer from "multer";
 import { Queue } from "bullmq";
 import { QdrantVectorStore } from "@langchain/qdrant";
-import { Embeddings } from "@langchain/core/embeddings";
 import { OpenAIEmbeddings } from "@langchain/openai";
 import OpenAI from "openai";
 
@@ -83,10 +82,28 @@ app.get("/chat", async (req, res) => {
         content: userQuery,
       },
     ],
+    stream: true,
   });
-  return res.json({
-    message: chatResult.choices[0].message.content,
-  });
+
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.flushHeaders();
+
+  const iterator = chatResult[Symbol.asyncIterator]();
+  while (true) {
+    const { value, done } = await iterator.next();
+
+    if (done) {
+      break;
+    }
+
+    const content = value.choices[0]?.delta?.content;
+
+    if (content) {
+      res.write(`data: ${JSON.stringify({ content })}\n\n`);
+    }
+  }
 });
 
 const PORT = process.env.PORT || 8000;

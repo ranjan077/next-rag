@@ -1,7 +1,4 @@
 services:
-  # =========================
-  # Node.js API Server
-  # =========================
   server:
     build:
       context: ./apps/server
@@ -43,9 +40,6 @@ services:
 
     restart: unless-stopped
 
-  # =========================
-  # BullMQ Worker
-  # =========================
   worker:
     build:
       context: ./apps/server
@@ -75,9 +69,6 @@ services:
 
     restart: unless-stopped
 
-  # =========================
-  # Next.js Client
-  # =========================
   client:
     build:
       context: ./apps/client
@@ -90,10 +81,6 @@ services:
       NODE_ENV: production
       NEXT_TELEMETRY_DISABLED: 1
       HOSTNAME: 0.0.0.0
-
-      # Change this to your production API URL
-      # Example:
-      # NEXT_PUBLIC_API_URL: https://api.example.com
       NEXT_PUBLIC_API_URL: http://localhost:8000
 
     depends_on:
@@ -101,9 +88,6 @@ services:
 
     restart: unless-stopped
 
-  # =========================
-  # Qdrant Vector Database
-  # =========================
   qdrant:
     image: qdrant/qdrant
 
@@ -112,9 +96,6 @@ services:
 
     restart: unless-stopped
 
-  # =========================
-  # Valkey / Redis-compatible DB
-  # =========================
   valkey:
     image: valkey/valkey
 
@@ -123,9 +104,6 @@ services:
 
     restart: unless-stopped
 
-# =========================
-# Persistent Volumes
-# =========================
 volumes:
   # Uploaded PDFs
   uploads:
