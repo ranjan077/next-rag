@@ -38,7 +38,7 @@ export default function Chat() {
     ]);
 
     const response = await fetch(
-      `http://localhost:8000/chat?message=${encodeURIComponent(userMessage)}`,
+      `${process.env.NEXT_PUBLIC_API_URL}/chat?message=${encodeURIComponent(userMessage)}`,
     );
 
     if (!response.ok || !response.body) {
