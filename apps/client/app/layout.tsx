@@ -35,14 +35,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <header className="flex justify-end items-center p-4 gap-4 h-16">
             <Show when="signed-in">
               <UserButton />
-              <SignOutButton />
+              <SignOutButton redirectUrl="/sign-in" />
             </Show>
           </header>
           <section className="h-screen  w-screen flex items-center justify-center ">
-            <Show when="signed-out">
-              <SignIn />
-            </Show>
-            <Show when="signed-in">{children}</Show>
+            {children}
           </section>
         </ClerkProvider>
       </body>

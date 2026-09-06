@@ -1,16 +1,19 @@
-import Image from "next/image";
-import FileUpload from "./components/flie-upload";
-import Chat from "./components/chat";
+"use client";
 
-export default function Home() {
+import { useAuth } from "@clerk/nextjs";
+import { redirect } from "next/navigation";
+import Dashboard from "./components/dashboard";
+
+export default function HomePage() {
+  const { userId } = useAuth();
+
+  if (!userId) {
+    redirect("/sign-in");
+  }
+
   return (
-    <div className="flex min-h-screen w-screen ">
-      <div className="w-[30vw] border flex justify-center items-center">
-        <FileUpload />
-      </div>
-      <div className="w-[70vw] border">
-        <Chat />
-      </div>
+    <div>
+      <Dashboard />;
     </div>
   );
 }
