@@ -60,10 +60,25 @@ app.post("/upload/pdf", upload.single("pdf"), async (req, res) => {
 
 app.get("/chat", async (req, res) => {
   const userQuery = req.query.message;
+
+  if (!userQuery) {
+    return res.status(400).json({ error: "A message is required." });
+  }
+
   const retriver = vectorStore.asRetriever({
     k: 2,
   });
-  const retriverResponse = await retriver.invoke(userQuery);
+
+  let retriverResponse;
+
+  // Express 4 does not catch rejections from async handlers, so an unhandled
+  // throw here would leave the request open and hang the client.
+  try {
+    retriverResponse = await retriver.invoke(userQuery);
+  } catch (error) {
+    console.error("retrieval failed:", error);
+    return res.status(502).json({ error: "Failed to search the documents." });
+  }
   const SYSTEM_PROMPT = `
 You are a Retrieval-Augmented Generation (RAG) AI assistant.
 
@@ -91,43 +106,59 @@ CONTEXT:
 USER QUESTION:
 {question}
 `;
-  const chatResult = await openAIClient.chat.completions.create({
-    model: "gpt-4.1",
-    messages: [
-      {
-        role: "system",
-        content: SYSTEM_PROMPT,
-      },
-      {
-        role: "developer",
-        content: retriverResponse[0]?.pageContent ?? "",
-      },
-      {
-        role: "user",
-        content: userQuery,
-      },
-    ],
-    stream: true,
-  });
+  let chatResult;
+
+  try {
+    chatResult = await openAIClient.chat.completions.create({
+      model: "gpt-4.1",
+      messages: [
+        {
+          role: "system",
+          content: SYSTEM_PROMPT,
+        },
+        {
+          role: "developer",
+          content: retriverResponse[0]?.pageContent ?? "",
+        },
+        {
+          role: "user",
+          content: userQuery,
+        },
+      ],
+      stream: true,
+    });
+  } catch (error) {
+    // Nothing has been written yet, so we can still answer with a real status.
+    console.error("chat completion failed:", error);
+    return res.status(502).json({ error: "Failed to reach the model." });
+  }
 
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
   res.flushHeaders();
 
-  const iterator = chatResult[Symbol.asyncIterator]();
-  while (true) {
-    const { value, done } = await iterator.next();
+  // Stop burning tokens if the browser navigates away mid-answer.
+  res.on("close", () => chatResult.controller.abort());
 
-    if (done) {
-      break;
+  try {
+    for await (const chunk of chatResult) {
+      const content = chunk.choices[0]?.delta?.content;
+
+      if (content) {
+        res.write(`data: ${JSON.stringify({ content })}\n\n`);
+      }
     }
 
-    const content = value.choices[0]?.delta?.content;
-
-    if (content) {
-      res.write(`data: ${JSON.stringify({ content })}\n\n`);
-    }
+    res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+  } catch (error) {
+    console.error("chat stream failed:", error);
+    res.write(
+      `data: ${JSON.stringify({ error: "The response was interrupted." })}\n\n`,
+    );
+  } finally {
+    // Without this the SSE response stays open and the client hangs forever.
+    res.end();
   }
 });
 

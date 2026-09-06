@@ -43,6 +43,16 @@ export default function Chat() {
     setMessage(e.target.value);
   };
 
+  // Replaces the trailing placeholder bubble instead of appending, so a failure
+  // never leaves an empty bubble stuck on the typing indicator.
+  const replaceLast = (content: string) => {
+    setMessages((prev) => {
+      const updated = [...prev];
+      updated[updated.length - 1] = { role: "assistant", content };
+      return updated;
+    });
+  };
+
   const sendMessage = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
@@ -69,7 +79,7 @@ export default function Chat() {
       );
 
       if (!response.ok || !response.body) {
-        console.log("send message failed!");
+        replaceLast("Sorry, I couldn't reach the server. Please try again.");
         return;
       }
 
@@ -77,8 +87,9 @@ export default function Chat() {
       const decoder = new TextDecoder();
 
       let assistantMessage = "";
+      let finished = false;
 
-      while (true) {
+      while (!finished) {
         const { value, done } = await reader.read();
 
         if (done) {
@@ -97,25 +108,35 @@ export default function Chat() {
 
           const json = JSON.parse(line.substring(6));
 
+          if (json.error) {
+            replaceLast(json.error);
+            finished = true;
+            break;
+          }
+
           if (json.done) {
+            // Breaks the outer loop too: a bare `break` here would only leave
+            // the `for`, and the next read() would block until the socket closed.
+            finished = true;
             break;
           }
 
           assistantMessage += json.content;
 
           // Update the existing assistant message
-          setMessages((prev) => {
-            const updatedMessages = [...prev];
-
-            updatedMessages[updatedMessages.length - 1] = {
-              role: "assistant",
-              content: assistantMessage,
-            };
-
-            return updatedMessages;
-          });
+          replaceLast(assistantMessage);
         }
       }
+
+      // Releases the connection when we stopped early; harmless if already closed.
+      await reader.cancel().catch(() => {});
+
+      if (!assistantMessage && !finished) {
+        replaceLast("Sorry, I didn't get a response. Please try again.");
+      }
+    } catch (error) {
+      console.error("send message failed:", error);
+      replaceLast("Sorry, something went wrong. Please try again.");
     } finally {
       setIsStreaming(false);
     }
