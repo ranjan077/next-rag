@@ -34,11 +34,20 @@ export default function FileUpload() {
   return (
     <button
       type="button"
-      className="flex w-full cursor-pointer flex-row items-center justify-center gap-2 rounded-lg border-2 border-slate-700 bg-slate-900 p-4 text-white shadow-2xl hover:border-slate-500 md:flex-col md:gap-3 md:py-8"
+      className="group flex w-full cursor-pointer flex-row items-center gap-3 rounded-xl border-2 border-dashed border-border bg-card p-3 text-left transition-colors hover:border-primary/50 hover:bg-accent focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30 focus-visible:outline-none md:flex-col md:items-center md:gap-2 md:p-6 md:text-center"
       onClick={handleFileUpload}
     >
-      <Upload className="h-5 w-5 shrink-0" />
-      <h3 className="text-base font-semibold sm:text-lg">Upload PDF File</h3>
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent text-accent-foreground transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+        <Upload className="h-4 w-4" />
+      </span>
+      <span className="min-w-0">
+        <span className="block text-sm font-medium text-card-foreground">
+          Upload PDF
+        </span>
+        <span className="block text-xs text-muted-foreground">
+          Click to choose a file
+        </span>
+      </span>
     </button>
   );
 }

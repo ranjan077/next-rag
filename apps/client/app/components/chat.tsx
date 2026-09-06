@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useEffect, useRef, useState } from "react";
-import { Bot, User } from "lucide-react";
+import { Bot, Send, User } from "lucide-react";
 
 type Message = {
   role: "assistant" | "user";
@@ -15,9 +15,24 @@ const GREETING: Message = {
   content: "Hi! How can I help you today?",
 };
 
+function TypingIndicator() {
+  return (
+    <span className="flex items-center gap-1 py-1" aria-label="Assistant is typing">
+      {[0, 1, 2].map((i) => (
+        <span
+          key={i}
+          className="typing-dot h-1.5 w-1.5 rounded-full bg-muted-foreground"
+          style={{ animationDelay: `${i * 0.16}s` }}
+        />
+      ))}
+    </span>
+  );
+}
+
 export default function Chat() {
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<Message[]>([GREETING]);
+  const [isStreaming, setIsStreaming] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -33,6 +48,7 @@ export default function Chat() {
 
     const userMessage = message;
     setMessage("");
+    setIsStreaming(true);
 
     // Add user message
     setMessages((prev) => [
@@ -47,94 +63,101 @@ export default function Chat() {
       },
     ]);
 
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/chat?message=${encodeURIComponent(userMessage)}`,
-    );
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/chat?message=${encodeURIComponent(userMessage)}`,
+      );
 
-    if (!response.ok || !response.body) {
-      console.log("send message failed!");
-      return;
-    }
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-
-    let assistantMessage = "";
-
-    while (true) {
-      const { value, done } = await reader.read();
-
-      if (done) {
-        break;
+      if (!response.ok || !response.body) {
+        console.log("send message failed!");
+        return;
       }
 
-      const chunk = decoder.decode(value, { stream: true });
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
 
-      // SSE can contain multiple events in one chunk
-      const lines = chunk.split("\n");
+      let assistantMessage = "";
 
-      for (const line of lines) {
-        if (!line.startsWith("data: ")) {
-          continue;
-        }
+      while (true) {
+        const { value, done } = await reader.read();
 
-        const json = JSON.parse(line.substring(6));
-
-        if (json.done) {
+        if (done) {
           break;
         }
 
-        assistantMessage += json.content;
+        const chunk = decoder.decode(value, { stream: true });
 
-        // Update the existing assistant message
-        setMessages((prev) => {
-          const updatedMessages = [...prev];
+        // SSE can contain multiple events in one chunk
+        const lines = chunk.split("\n");
 
-          updatedMessages[updatedMessages.length - 1] = {
-            role: "assistant",
-            content: assistantMessage,
-          };
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) {
+            continue;
+          }
 
-          return updatedMessages;
-        });
+          const json = JSON.parse(line.substring(6));
+
+          if (json.done) {
+            break;
+          }
+
+          assistantMessage += json.content;
+
+          // Update the existing assistant message
+          setMessages((prev) => {
+            const updatedMessages = [...prev];
+
+            updatedMessages[updatedMessages.length - 1] = {
+              role: "assistant",
+              content: assistantMessage,
+            };
+
+            return updatedMessages;
+          });
+        }
       }
+    } finally {
+      setIsStreaming(false);
     }
   };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-        <div className="mx-auto w-full max-w-3xl px-3 py-4 sm:px-4">
+    <div className="flex min-h-0 flex-1 flex-col bg-background">
+      <div className="chat-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain">
+        <div className="mx-auto flex w-full max-w-3xl flex-col gap-5 px-3 py-6 sm:px-4">
           {messages.map((message, index) => {
             const isUser = message.role === "user";
+            const isPending = !isUser && message.content === "";
 
             return (
               <div
                 key={`message-${index}`}
-                className={`mb-4 flex gap-2 sm:gap-3 ${
+                className={`message-in flex items-end gap-2 sm:gap-2.5 ${
                   isUser ? "justify-end" : "justify-start"
                 }`}
               >
                 {/* Bot icon */}
                 {!isUser && (
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted">
-                    <Bot className="h-5 w-5" />
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent text-accent-foreground">
+                    <Bot className="h-4 w-4" />
                   </div>
                 )}
 
                 {/* Message */}
                 <div
-                  className={`min-w-0 max-w-[85%] rounded-lg px-3 py-2 text-sm break-words whitespace-pre-wrap sm:max-w-[75%] sm:px-4 ${
-                    isUser ? "bg-primary text-primary-foreground" : "bg-muted"
+                  className={`min-w-0 max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed break-words whitespace-pre-wrap shadow-sm sm:max-w-[75%] sm:px-4 ${
+                    isUser
+                      ? "rounded-br-md bg-primary text-primary-foreground"
+                      : "rounded-bl-md border border-border bg-card text-card-foreground"
                   }`}
                 >
-                  {message.content}
+                  {isPending ? <TypingIndicator /> : message.content}
                 </div>
 
                 {/* User icon */}
                 {isUser && (
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted">
-                    <User className="h-5 w-5" />
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-secondary text-secondary-foreground">
+                    <User className="h-4 w-4" />
                   </div>
                 )}
               </div>
@@ -145,21 +168,30 @@ export default function Chat() {
       </div>
 
       <form
-        className="shrink-0 border-t bg-background p-3 sm:p-4"
+        className="shrink-0 border-t border-border bg-card/70 p-3 backdrop-blur-sm sm:p-4"
         onSubmit={sendMessage}
       >
-        <div className="mx-auto flex w-full max-w-3xl items-center gap-2">
+        <div className="mx-auto flex w-full max-w-3xl items-center gap-2 rounded-2xl border border-border bg-background p-1.5 shadow-sm transition-colors focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/30">
           <Input
-            placeholder="type your query here..."
+            placeholder="Ask anything about your documents..."
             value={message}
             onChange={handleInputChange}
-            className="h-10 flex-1"
+            disabled={isStreaming}
+            className="h-9 flex-1 border-0 bg-transparent px-2.5 shadow-none focus-visible:border-0 focus-visible:ring-0 disabled:bg-transparent"
           />
 
-          <Button type="submit" size="lg" disabled={!message.trim()}>
-            Send
+          <Button
+            type="submit"
+            aria-label="Send message"
+            disabled={!message.trim() || isStreaming}
+            className="h-9 w-9 shrink-0 rounded-xl p-0"
+          >
+            <Send className="h-4 w-4" />
           </Button>
         </div>
+        <p className="mx-auto mt-2 w-full max-w-3xl text-center text-xs text-muted-foreground">
+          Responses are generated from your uploaded documents.
+        </p>
       </form>
     </div>
   );
