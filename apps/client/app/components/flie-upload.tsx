@@ -3,7 +3,7 @@
 import { Upload } from "lucide-react";
 
 export default function FileUpload() {
-  const handleFileUpload = async (event: React.MouseEvent<HTMLDivElement>) => {
+  const handleFileUpload = async () => {
     const el = document.createElement("input");
     el.type = "file";
     el.accept = ".pdf";
@@ -30,13 +30,15 @@ export default function FileUpload() {
     });
     el.click();
   };
+
   return (
-    <div
-      className="bg-slate-900 text-white shadow-2xl flex flex-col justify-center items-center rounded-lg w-screen p-4 m-2 border-2 border-slate-700 hover:border-slate-500 pointer"
+    <button
+      type="button"
+      className="flex w-full cursor-pointer flex-row items-center justify-center gap-2 rounded-lg border-2 border-slate-700 bg-slate-900 p-4 text-white shadow-2xl hover:border-slate-500 md:flex-col md:gap-3 md:py-8"
       onClick={handleFileUpload}
     >
-      <h3 className="text-lg font-semibold p-2">Upload PDF File</h3>
-      <Upload></Upload>
-    </div>
+      <Upload className="h-5 w-5 shrink-0" />
+      <h3 className="text-base font-semibold sm:text-lg">Upload PDF File</h3>
+    </button>
   );
 }

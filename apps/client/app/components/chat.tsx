@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Bot, User } from "lucide-react";
 
 type Message = {
@@ -10,9 +10,19 @@ type Message = {
   content: string;
 };
 
+const GREETING: Message = {
+  role: "assistant",
+  content: "Hi! How can I help you today?",
+};
+
 export default function Chat() {
   const [message, setMessage] = useState("");
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>([GREETING]);
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setMessage(e.target.value);
@@ -92,55 +102,64 @@ export default function Chat() {
   };
 
   return (
-    <div className="relative p-4">
-      <div className="overflow-scroll h-[82vh]">
-        {messages.map((message, index) => {
-          const isUser = message.role === "user";
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+        <div className="mx-auto w-full max-w-3xl px-3 py-4 sm:px-4">
+          {messages.map((message, index) => {
+            const isUser = message.role === "user";
 
-          return (
-            <div
-              key={`message-${index}`}
-              className={`flex gap-3 mb-4 ${
-                isUser ? "justify-end" : "justify-start"
-              }`}
-            >
-              {/* Bot icon */}
-              {!isUser && (
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted">
-                  <Bot className="h-5 w-5" />
-                </div>
-              )}
-
-              {/* Message */}
+            return (
               <div
-                className={`max-w-[75%] rounded-lg px-4 py-2 whitespace-pre-wrap break-words ${
-                  isUser ? "bg-primary text-primary-foreground" : "bg-muted"
+                key={`message-${index}`}
+                className={`mb-4 flex gap-2 sm:gap-3 ${
+                  isUser ? "justify-end" : "justify-start"
                 }`}
               >
-                {message.content}
-              </div>
+                {/* Bot icon */}
+                {!isUser && (
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted">
+                    <Bot className="h-5 w-5" />
+                  </div>
+                )}
 
-              {/* User icon */}
-              {isUser && (
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted">
-                  <User className="h-5 w-5" />
+                {/* Message */}
+                <div
+                  className={`min-w-0 max-w-[85%] rounded-lg px-3 py-2 text-sm break-words whitespace-pre-wrap sm:max-w-[75%] sm:px-4 ${
+                    isUser ? "bg-primary text-primary-foreground" : "bg-muted"
+                  }`}
+                >
+                  {message.content}
                 </div>
-              )}
-            </div>
-          );
-        })}
+
+                {/* User icon */}
+                {isUser && (
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted">
+                    <User className="h-5 w-5" />
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          <div ref={bottomRef} />
+        </div>
       </div>
 
-      <form className="fixed bottom-2.5 flex w-full" onSubmit={sendMessage}>
-        <Input
-          placeholder="type your query here..."
-          value={message}
-          onChange={handleInputChange}
-        />
+      <form
+        className="shrink-0 border-t bg-background p-3 sm:p-4"
+        onSubmit={sendMessage}
+      >
+        <div className="mx-auto flex w-full max-w-3xl items-center gap-2">
+          <Input
+            placeholder="type your query here..."
+            value={message}
+            onChange={handleInputChange}
+            className="h-10 flex-1"
+          />
 
-        <Button type="submit" disabled={!message.trim()}>
-          Send
-        </Button>
+          <Button type="submit" size="lg" disabled={!message.trim()}>
+            Send
+          </Button>
+        </div>
       </form>
     </div>
   );

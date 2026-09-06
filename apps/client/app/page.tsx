@@ -14,9 +14,5 @@ export default function HomePage() {
     redirect("/sign-in");
   }
 
-  return (
-    <div>
-      <Dashboard role={role} />;
-    </div>
-  );
+  return <Dashboard role={role} />;
 }
