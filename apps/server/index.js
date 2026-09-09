@@ -66,7 +66,7 @@ app.get("/chat", async (req, res) => {
   }
 
   const retriver = vectorStore.asRetriever({
-    k: 2,
+    k: 4,
   });
 
   let retriverResponse;
@@ -79,6 +79,10 @@ app.get("/chat", async (req, res) => {
     console.error("retrieval failed:", error);
     return res.status(502).json({ error: "Failed to search the documents." });
   }
+  const context = retriverResponse
+    .map((doc) => doc.pageContent)
+    .join("\n\n---\n\n");
+  console.log("context: ", context);
   const SYSTEM_PROMPT = `
 You are a Retrieval-Augmented Generation (RAG) AI assistant.
 
@@ -100,11 +104,9 @@ STRICT RULES:
 
 Always prioritize factual accuracy and grounding over providing an answer.
 
-CONTEXT:
-{context}
 
-USER QUESTION:
-{question}
+CONTEXT:
+${context}
 `;
   let chatResult;
 
@@ -115,10 +117,6 @@ USER QUESTION:
         {
           role: "system",
           content: SYSTEM_PROMPT,
-        },
-        {
-          role: "developer",
-          content: retriverResponse[0]?.pageContent ?? "",
         },
         {
           role: "user",
