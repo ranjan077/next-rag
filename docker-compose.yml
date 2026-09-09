@@ -1,4 +1,25 @@
 services:
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./certbot/www:/var/www/certbot:ro
+      - ./certbot/conf:/etc/letsencrypt:ro
+    depends_on:
+      - client
+      - server
+    restart: unless-stopped
+
+  certbot:
+    image: certbot/certbot
+    volumes:
+      - ./certbot/www:/var/www/certbot
+      - ./certbot/conf:/etc/letsencrypt
+
   server:
     build:
       context: ./apps/server
@@ -78,7 +99,7 @@ services:
         NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
 
     ports:
-      - "3000:3000"
+      - "3000"
 
     environment:
       NODE_ENV: production
@@ -96,7 +117,7 @@ services:
   qdrant:
     image: qdrant/qdrant
     ports:
-      - "6333:6333"
+      - "6333"
 
     volumes:
       - qdrant_storage:/qdrant/storage
