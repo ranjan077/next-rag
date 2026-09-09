@@ -192,3 +192,122 @@
     animation: none;
   }
 }
+
+/* Toast (@base-ui/react/toast) — stacking, swipe and enter/exit transitions.
+   Ported from the Base UI reference styles and re-skinned with theme tokens. */
+.toast-root {
+  --gap: 0.75rem;
+  --peek: 0.75rem;
+  --scale: calc(max(0, 1 - (var(--toast-index) * 0.1)));
+  --shrink: calc(1 - var(--scale));
+  --height: var(--toast-frontmost-height, var(--toast-height));
+  --offset-y: calc(
+    var(--toast-offset-y) * -1 + (var(--toast-index) * var(--gap) * -1) +
+      var(--toast-swipe-movement-y)
+  );
+
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: auto;
+  box-sizing: border-box;
+  width: 100%;
+  height: var(--height);
+  z-index: calc(1000 - var(--toast-index));
+
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background-color: var(--popover);
+  color: var(--popover-foreground);
+  box-shadow:
+    0 10px 30px -12px oklch(0 0 0 / 25%),
+    0 2px 6px -2px oklch(0 0 0 / 12%);
+
+  transform-origin: bottom center;
+  transform: translateX(var(--toast-swipe-movement-x))
+    translateY(
+      calc(
+        var(--toast-swipe-movement-y) - (var(--toast-index) * var(--peek)) -
+          (var(--shrink) * var(--height))
+      )
+    )
+    scale(var(--scale));
+  transition:
+    transform 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.5s,
+    height 0.15s;
+  user-select: none;
+}
+
+.toast-root[data-expanded] {
+  transform: translateX(var(--toast-swipe-movement-x)) translateY(var(--offset-y));
+  height: var(--toast-height);
+}
+
+.toast-root[data-starting-style],
+.toast-root[data-ending-style] {
+  transform: translateY(150%);
+}
+
+.toast-root[data-limited] {
+  opacity: 0;
+}
+
+.toast-root[data-ending-style] {
+  opacity: 0;
+}
+
+.toast-root[data-ending-style][data-swipe-direction="up"] {
+  transform: translateY(calc(var(--toast-swipe-movement-y) - 150%));
+}
+.toast-root[data-ending-style][data-swipe-direction="down"] {
+  transform: translateY(calc(var(--toast-swipe-movement-y) + 150%));
+}
+.toast-root[data-ending-style][data-swipe-direction="left"] {
+  transform: translateX(calc(var(--toast-swipe-movement-x) - 150%))
+    translateY(var(--offset-y));
+}
+.toast-root[data-ending-style][data-swipe-direction="right"] {
+  transform: translateX(calc(var(--toast-swipe-movement-x) + 150%))
+    translateY(var(--offset-y));
+}
+
+/* Bridges the visual gap so hovering between stacked toasts keeps them expanded. */
+.toast-root::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  height: calc(var(--gap) + 1px);
+}
+
+.toast-root:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -1px;
+}
+
+.toast-content {
+  box-sizing: border-box;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.875rem;
+  overflow: hidden;
+  transition: opacity 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.toast-content[data-behind] {
+  opacity: 0;
+}
+
+.toast-content[data-expanded] {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast-root,
+  .toast-content {
+    transition: none;
+  }
+}

@@ -5,6 +5,7 @@ import { ClerkProvider, Show, UserButton, SignOutButton } from "@clerk/nextjs";
 import { Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ThemeToggle from "./components/theme-toggle";
+import ToastProvider from "./components/toaster";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -64,7 +65,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             </div>
           </header>
 
-          <main className="flex min-h-0 flex-1 flex-col">{children}</main>
+          <ToastProvider>
+            <main className="flex min-h-0 flex-1 flex-col">{children}</main>
+          </ToastProvider>
         </ClerkProvider>
       </body>
     </html>
