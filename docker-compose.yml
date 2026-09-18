@@ -14,8 +14,8 @@ services:
       NODE_ENV: production
       PORT: 8000
 
-      # Qdrant
-      QDRANT_URL: http://qdrant:6333
+      # Qdrant (runs outside this project)
+      QDRANT_URL: ${QDRANT_URL}
 
       # Valkey
       VALKEY_HOST: valkey
@@ -38,7 +38,6 @@ services:
       - uploads:/app/uploads
 
     depends_on:
-      - qdrant
       - valkey
 
     restart: unless-stopped
@@ -50,6 +49,11 @@ services:
 
     command: ["node", "worker.js"]
 
+    # On proxy only to reach the standalone Qdrant container.
+    networks:
+      default:
+      proxy:
+
     environment:
       NODE_ENV: production
 
@@ -57,8 +61,8 @@ services:
       VALKEY_HOST: valkey
       VALKEY_PORT: 6379
 
-      # Qdrant
-      QDRANT_URL: http://qdrant:6333
+      # Qdrant (runs outside this project)
+      QDRANT_URL: ${QDRANT_URL}
 
       # OpenAI
       OPENAI_API_KEY: ${OPENAI_API_KEY}
@@ -68,7 +72,6 @@ services:
 
     depends_on:
       - valkey
-      - qdrant
 
     restart: unless-stopped
 
@@ -99,14 +102,6 @@ services:
 
     restart: unless-stopped
 
-  qdrant:
-    image: qdrant/qdrant
-
-    volumes:
-      - qdrant_storage:/qdrant/storage
-
-    restart: unless-stopped
-
   valkey:
     image: valkey/valkey
 
@@ -119,14 +114,12 @@ volumes:
   # Uploaded PDFs
   uploads:
 
-  # Qdrant vector database
-  qdrant_storage:
-
   # Valkey data
   valkey_data:
 
 networks:
-  # Shared with the standalone nginx project. Create once on the VPS:
+  # Shared with the standalone nginx and Qdrant containers. Once on the VPS:
   #   docker network create proxy
+  #   docker network connect proxy <qdrant-container>
   proxy:
     external: true
