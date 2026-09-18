@@ -1,32 +1,14 @@
 services:
-  nginx:
-    image: nginx:alpine
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/conf.d:/etc/nginx/conf.d:ro
-      - ./certbot/www:/var/www/certbot:ro
-      - ./certbot/conf:/etc/letsencrypt:ro
-    depends_on:
-      - client
-      - server
-    restart: unless-stopped
-
-  certbot:
-    image: certbot/certbot
-    volumes:
-      - ./certbot/www:/var/www/certbot
-      - ./certbot/conf:/etc/letsencrypt
-
   server:
     build:
       context: ./apps/server
       dockerfile: dockerfile
 
-    ports:
-      - "8000:8000"
+    # Reached by the shared VPS nginx as http://rag-server:8000.
+    networks:
+      default:
+      proxy:
+        aliases: [rag-server]
 
     environment:
       NODE_ENV: production
@@ -98,8 +80,11 @@ services:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
         NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
 
-    ports:
-      - "3000"
+    # Reached by the shared VPS nginx as http://rag-client:3000.
+    networks:
+      default:
+      proxy:
+        aliases: [rag-client]
 
     environment:
       NODE_ENV: production
@@ -116,8 +101,6 @@ services:
 
   qdrant:
     image: qdrant/qdrant
-    ports:
-      - "6333"
 
     volumes:
       - qdrant_storage:/qdrant/storage
@@ -141,3 +124,9 @@ volumes:
 
   # Valkey data
   valkey_data:
+
+networks:
+  # Shared with the standalone nginx project. Create once on the VPS:
+  #   docker network create proxy
+  proxy:
+    external: true
